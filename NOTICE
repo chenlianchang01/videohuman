@@ -1,0 +1,35 @@
+# 第三方组件与许可证
+
+videohuman 集成了以下开源组件,在此致谢并按各自许可证要求署名。
+
+## 代码(vendor 于 third_party/,完整许可证文本见各目录)
+
+| 组件 | 用途 | 许可证 |
+|---|---|---|
+| [MuseTalk](https://github.com/TMElyralab/MuseTalk)(Tencent Music) | 数字人唇形同步(默认引擎) | MIT |
+| [CosyVoice](https://github.com/FunAudioLLM/CosyVoice)(FunAudioLLM) | 语音合成(CosyVoice3) | Apache-2.0 |
+| [LatentSync](https://github.com/bytedance/LatentSync)(ByteDance) | 唇形同步(备选,未默认启用) | Apache-2.0 |
+| [index-tts](https://github.com/index-tts/index-tts)(bilibili) | 语音合成(备选,未默认启用) | bilibili Model Use License(非 OSI 标准,见 third_party/index-tts/LICENSE 与 LICENSE_ZH.txt;注意:每份拷贝须保留协议全文、月活超 1 亿或年收入超 10 亿元须单独授权、不得用于改进其他 AI 模型) |
+
+## 模型权重(不随仓库分发,由 download_weights.py 下载)
+
+| 权重 | 来源 | 许可证 |
+|---|---|---|
+| Fun-CosyVoice3-0.5B-2512 | ModelScope FunAudioLLM | 以模型卡为准(所属 CosyVoice 项目为 Apache-2.0) |
+| SenseVoiceSmall | ModelScope iic | Apache-2.0 |
+| MuseTalk 配套(musetalk/V15、sd-vae-ft-mse、whisper-tiny、face-parsing、syncnet) | HuggingFace | MIT / Apache-2.0(见 MuseTalk LICENSE 附录) |
+| IndexTTS-2(可选) | HuggingFace | bilibili Model Use License |
+
+## 可选组件(需用户自行获取,不随仓库分发)
+
+- **LstmSync**(https://github.com/oneCodeSuperman/LstmSync):第三方数字人引擎,授权制分发(api_key 见作者站点)。本项目的 `vh_core/providers/local/avatar_lstmsync.py` 为兼容适配层,引擎代码与权重请向作者获取。其依赖的 insightface buffalo_l 权重仅限非商业研究用途。
+- 发布功能的上传流程参考了 [social-auto-upload](https://github.com/dreammis/social-auto-upload) 与 biliup,代码为本项目重写。
+
+## 字体(assets/font/,详见 assets/font/LICENSES.md)
+
+AlibabaPuHuiTi-3(阿里巴巴普惠体,免费商用)、ZhanKuWenYiTi(站酷文艺体,免费商用)、ShangguSerif / XiaoheSimplifySerif / TaipeiSansTCBeta / CooperZhengKai(SIL Open Font License)。
+
+## 免责声明
+
+本项目仅提供技术工具。使用者应确保对输入的文案、音频、视频素材拥有合法权利,
+生成内容需遵守所在地法律法规及各平台规则(包括但不限于 AI 生成内容标识要求)。

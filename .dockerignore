@@ -1,0 +1,18 @@
+# 构建上下文 = 项目根;数据全走卷挂载,不进镜像
+.git/
+.venv/
+**/__pycache__/
+workspace/
+models/
+assets/
+third_party/
+reuse/
+examples/
+web/node_modules/
+web/src/
+web/index.html
+web/vite.config.js
+configs/cookies/
+docker/
+*.mp4
+*.wav

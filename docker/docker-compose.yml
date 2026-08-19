@@ -1,0 +1,26 @@
+# 萝卜根 v2 服务端编排:vh-server(GPU 推理)
+# 用法:cp .env.example .env 填入 token 后,docker compose up -d
+services:
+  vh-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: vh-server:latest
+    ports:
+      - "8100:8100"
+    gpus: all
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PYTHONUTF8: "1"
+      # 可选:仅使用 lstmsync 引擎时取消注释(引擎需自备,见 third_party/README.md),
+      # 并同时在下方 volumes 里挂载引擎目录
+      # VH_LSTMSYNC_DIR: /opt/lstmsync
+    volumes:
+      - ../models:/app/models:ro
+      - ../third_party:/app/third_party:ro
+      - ../assets:/app/assets
+      - ../workspace:/app/workspace
+      - ../configs:/app/configs
+      # 可选:仅使用 lstmsync 引擎时取消注释,并把左侧换成你本机的 lstmsync 引擎目录
+      # - /path/to/lstmsync:/opt/lstmsync:ro

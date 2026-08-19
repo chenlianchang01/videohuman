@@ -1,0 +1,4 @@
+@echo off
+rem 服务器模式本地配置模板:复制本文件为 server.local.bat 后填写(该文件已被 gitignore)
+rem token 是局域网/公网访问的唯一防线,建议长随机串(可用 python -c "import secrets;print(secrets.token_urlsafe(32))" 生成)
+set VH_WEB_TOKEN=

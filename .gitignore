@@ -1,0 +1,26 @@
+# ---- Python ----
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# ---- 权重与运行产物(一律不入库)----
+models/*/
+!models/README.md
+workspace/
+third_party/MuseTalk/models/
+third_party/MuseTalk/musetalk/utils/face_detection/detection/sfd/s3fd.pth
+third_party/index-tts/checkpoints/
+
+# 可选引擎 LstmSync 需用户自备,防止误提交(授权制资产,见 third_party/README.md)
+third_party/lstmsync/
+
+# ---- 敏感数据 ----
+configs/cookies/
+configs/luogen.json
+*.local.bat
+.env
+
+# ---- 前端构建 ----
+web/node_modules/
+web/dist/

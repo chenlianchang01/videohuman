@@ -1,0 +1,10 @@
+# 真实素材接入测试:声音克隆(ref_audio 参考音)+ 画面(avatar_video 素材视频)
+# 使用前请把下面的占位路径换成你自己的素材(素材不进 git,需自备)
+job_id = "real-1"
+
+[params]
+text = "大家好,我是萝卜根。今天演示一下,怎么用 AI 把一段声音和一段画面,合成一条全新的口播视频。效果怎么样,评论区告诉我。"
+ref_audio = "assets/ref_voice.wav"   # 换成你自己的参考音频路径(声音克隆用)
+ref_text = ""                        # 参考音频对应的逐字文本(声音克隆用,与 ref_audio 内容一致)
+avatar_video = "assets/avatar.mp4"   # 换成你自己的口播素材视频路径(正脸、清晰人声)
+avatar_engine = "lstmsync"           # 可选 "musetalk"(默认)或 "lstmsync"(需自备引擎,见 third_party/README.md)

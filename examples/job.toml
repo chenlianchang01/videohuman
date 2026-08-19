@@ -1,0 +1,17 @@
+# 单 job spec 示例:vh run --spec examples/job.toml
+job_id = "example-001"
+
+[params]
+text = "孩子突然厌学,背后藏着什么秘密?家长别慌,这三个信号一定要看懂。"
+avatar_video = "assets/avatar.mp4"   # 换成你自己的口播素材视频路径
+
+# provider 级自由度:未识别的 key 会透传给对应 stage/provider
+[params.tts]
+speed = 1.0
+
+[params.avatar]
+batch_size = 8
+
+[params.postprocess]
+subtitle_fontsize = 44
+bgm_volume = 0.12

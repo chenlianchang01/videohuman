@@ -1,0 +1,16 @@
+# 批量文件示例:vh batch --file examples/batch.toml
+[defaults.params]
+avatar_video = "assets/avatar.mp4"   # 换成你自己的口播素材视频路径
+bgm_volume = 0.12
+
+[[jobs]]
+job_id = "batch-001"
+text = "孩子突然厌学,背后藏着什么秘密?家长别慌,这三个信号一定要看懂。"
+
+[[jobs]]
+job_id = "batch-002"
+text = "为什么越省钱越穷?普通人逆袭的第一步,是换一种思维方式。"
+
+[[jobs]]
+job_id = "batch-003"
+text = "每天十分钟,坚持一个月,你的身体会发生惊人的变化。"
