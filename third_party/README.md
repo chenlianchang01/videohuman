@@ -20,6 +20,18 @@
 - 每份模型或其衍生作品的拷贝中**必须保留原始版权声明及协议全文**(因此 `download_weights.py` 在下载 IndexTTS-2 权重后会自动把 `third_party/index-tts/LICENSE` 复制到 `models/IndexTTS-2/`);
 - 不得用该模型改进除 IndexTTS-2 自身及其衍生作品以外的商业 AI 模型。
 
+## 本地修改清单(许可证合规声明)
+
+为适配本项目的运行环境,对 vendor 源码做过以下修改,**每处修改在对应文件内均有
+`[vh2]` / `[vh2 补丁]` 注释标记**(Apache-2.0 §4(b) 要求的修改声明):
+
+- `MuseTalk/`(MIT):
+  - `musetalk/utils/preprocessing.py`:landmark 来源由 mmpose/dwpose 替换为 mediapipe FaceMesh(去 mmcv 系依赖,dwpose 权重不再需要);
+  - `musetalk/models/unet.py`、`musetalk/utils/face_detection/detection/sfd/sfd_detector.py`、`musetalk/utils/face_parsing/__init__.py`、`musetalk/utils/face_parsing/resnet.py`:`torch.load` 显式 `weights_only=False`(适配 torch ≥ 2.6 的新默认值,加载官方旧权重)。
+- `CosyVoice/`(Apache-2.0):
+  - `cosyvoice/utils/file_utils.py`:`load_wav` 改用 soundfile 读取(绕开 torchaudio 2.9 在 Windows 上的 torchcodec 依赖),重采样仍走 torchaudio。
+- `index-tts/`、`LatentSync/`:**未做任何修改**。
+
 ## 不需要克隆的组件
 
 - **FunASR / SenseVoice-Small(ASR)**:`pip install funasr` 即可,模型走 ModelScope 按需下载
