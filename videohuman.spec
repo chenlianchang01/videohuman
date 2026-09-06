@@ -429,10 +429,9 @@ excludes = [
     "notebook",
     "sphinx",
     "numpydoc",
-    # 测试框架
+    # 测试框架(pytest/doctest 可排除,但 unittest.mock 不能排除——torch 内部依赖)
     "pytest",
     "doctest",
-    "unittest.mock",
     # 绘图(如被间接依赖会自动保留,这里只排除顶层)
     "matplotlib",
     "seaborn",
