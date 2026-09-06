@@ -444,11 +444,7 @@ excludes = [
     # 文档生成
     "pydoc",
     # 其他
-    "pip",
-    "setuptools.tests",
-    "wheel",
     "conda",
-    "distutils.tests",
     "lib2to3",
     "test",
     "tests",
