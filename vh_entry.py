@@ -9,8 +9,28 @@
 """
 from __future__ import annotations
 
+import io
 import os
 import sys
+
+# ---------------------------------------------------------------------------
+# 必须在最前面执行:修复 Windows 控制台中文编码问题
+# typer/click/rich 输出中文时,Windows 默认 charmap 编码会报 UnicodeEncodeError
+# ---------------------------------------------------------------------------
+if sys.platform == "win32":
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    os.environ.setdefault("PYTHONUTF8", "1")
+    try:
+        if hasattr(sys.stdout, "buffer"):
+            sys.stdout = io.TextIOWrapper(
+                sys.stdout.buffer, encoding="utf-8", errors="replace", line_buffering=True
+            )
+        if hasattr(sys.stderr, "buffer"):
+            sys.stderr = io.TextIOWrapper(
+                sys.stderr.buffer, encoding="utf-8", errors="replace", line_buffering=True
+            )
+    except Exception:
+        pass
 
 
 def _bootstrap_frozen() -> None:

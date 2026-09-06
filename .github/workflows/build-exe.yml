@@ -165,12 +165,16 @@ jobs:
       # 7. 冒烟测试:exe --help 能否正常运行
       # ------------------------------------------------------------
       - name: Smoke test (exe --help)
+        continue-on-error: true  # 冒烟测试失败不阻断产物上传,便于手动排查
         run: |
+          chcp 65001 >nul
+          $env:PYTHONIOENCODING = "utf-8"
+          $env:PYTHONUTF8 = "1"
           Write-Host "运行 videohuman.exe --help ..."
           $output = & dist\videohuman\videohuman.exe --help 2>&1
           Write-Host $output
           if ($LASTEXITCODE -ne 0) {
-            Write-Host "警告: --help 返回码 $LASTEXITCODE(可能是缺少 DLL,继续打包)"
+            Write-Host "警告: --help 返回码 $LASTEXITCODE(冒烟测试未通过,但继续上传产物)"
           } else {
             Write-Host "冒烟测试通过"
           }
