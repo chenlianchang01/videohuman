@@ -24,3 +24,9 @@ configs/luogen.json
 # ---- 前端构建 ----
 web/node_modules/
 web/dist/
+
+# ---- PyInstaller 打包产物 ----
+build/
+dist/
+*.spec.bak
+videohuman-windows.zip*

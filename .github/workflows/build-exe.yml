@@ -1,0 +1,290 @@
+name: Build Windows EXE
+
+# 构建 videohuman Windows 可执行文件(onedir 非便携版)
+# 触发方式:
+#   1. 手动触发(Actions 页面点 Run workflow)
+#   2. 推送 v* tag(自动创建 GitHub Release 并上传附件)
+#
+# 产物: dist/videohuman/ 目录,包含 videohuman.exe + _internal/
+# 压缩为 videohuman-windows.zip 后上传 artifact / Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: "同时创建 Pre-release 并上传附件"
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write  # 创建 Release 需要
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 360  # torch CUDA 依赖大,打包耗时较长
+
+    steps:
+      # ------------------------------------------------------------
+      # 1. 检出代码
+      # ------------------------------------------------------------
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: false  # third_party 已在仓库内,无 submodule
+
+      # ------------------------------------------------------------
+      # 2. 环境准备
+      # ------------------------------------------------------------
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+
+      - name: Setup Node.js 20 (前端构建)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Disk space before install
+        run: |
+          Write-Host "=== 磁盘空间(安装前) ==="
+          Get-PSDrive C | Select-Object Used,Free,@{N='FreeGB';E={[math]::Round($_.Free/1GB,2)}}
+
+      # ------------------------------------------------------------
+      # 3. 安装 Python 依赖(torch CUDA 12.8 + 全部 AI 依赖)
+      # ------------------------------------------------------------
+      - name: Install Python dependencies (uv sync)
+        run: uv sync --frozen
+        env:
+          # torch 从 PyTorch 官方 cu128 索引下载(pyproject.toml 已配置)
+          UV_HTTP_TIMEOUT: "300"
+
+      - name: Install PyInstaller
+        run: uv pip install pyinstaller
+
+      - name: Clean uv cache (free disk space)
+        run: |
+          uv cache clean
+          Write-Host "uv cache 已清理"
+
+      # ------------------------------------------------------------
+      # 4. 构建前端 (Vue3 + Vite -> web/dist)
+      # ------------------------------------------------------------
+      - name: Build frontend
+        working-directory: web
+        run: |
+          npm ci
+          npm run build
+        env:
+          CI: true
+
+      - name: Verify frontend dist
+        run: |
+          if (Test-Path "web\dist\index.html") {
+            Write-Host "前端构建成功: web/dist/index.html"
+            Get-ChildItem web\dist -Recurse | Measure-Object -Property Length -Sum | ForEach-Object {
+              Write-Host "前端总大小: $([math]::Round($_.Sum/1MB,2)) MB"
+            }
+          } else {
+            Write-Error "前端构建失败: web/dist/index.html 不存在"
+            exit 1
+          }
+
+      # ------------------------------------------------------------
+      # 5. 磁盘空间检查 + 清理临时文件
+      # ------------------------------------------------------------
+      - name: Disk space before PyInstaller
+        run: |
+          Write-Host "=== 磁盘空间(打包前) ==="
+          Get-PSDrive C | Select-Object @{N='FreeGB';E={[math]::Round($_.Free/1GB,2)}}
+          # 清理 node_modules(前端已构建完成,不再需要)
+          if (Test-Path "web\node_modules") {
+            Remove-Item -Recurse -Force "web\node_modules"
+            Write-Host "web\node_modules 已清理"
+          }
+          # 清理 npm 缓存
+          npm cache clean --force 2>$null
+          Write-Host "npm cache 已清理"
+
+      # ------------------------------------------------------------
+      # 6. PyInstaller 打包
+      # ------------------------------------------------------------
+      - name: Build EXE with PyInstaller
+        run: |
+          Write-Host "开始 PyInstaller 打包..."
+          uv run pyinstaller videohuman.spec --noconfirm --clean
+          Write-Host "PyInstaller 打包完成"
+        env:
+          PYINSTALLER_VERBOSE: "0"
+
+      - name: Verify build output
+        run: |
+          $exePath = "dist\videohuman\videohuman.exe"
+          if (Test-Path $exePath) {
+            $size = (Get-Item $exePath).Length
+            Write-Host "exe 存在: $exePath ($([math]::Round($size/1MB,2)) MB)"
+          } else {
+            Write-Error "打包失败: $exePath 不存在"
+            exit 1
+          }
+          $internalPath = "dist\videohuman\_internal"
+          if (Test-Path $internalPath) {
+            $totalSize = (Get-ChildItem $internalPath -Recurse | Measure-Object -Property Length -Sum).Sum
+            Write-Host "_internal 总大小: $([math]::Round($totalSize/1GB,2)) GB"
+          }
+          # 验证关键资源是否打包
+          $checks = @(
+            "_internal\configs\default.toml",
+            "_internal\third_party\CosyVoice",
+            "_internal\third_party\MuseTalk",
+            "_internal\web\dist\index.html",
+            "_internal\download_weights.py",
+            "_internal\assets"
+          )
+          foreach ($c in $checks) {
+            $p = "dist\videohuman\$c"
+            if (Test-Path $p) {
+              Write-Host "  [OK] $c"
+            } else {
+              Write-Host "  [MISSING] $c"
+            }
+          }
+
+      # ------------------------------------------------------------
+      # 7. 冒烟测试:exe --help 能否正常运行
+      # ------------------------------------------------------------
+      - name: Smoke test (exe --help)
+        run: |
+          Write-Host "运行 videohuman.exe --help ..."
+          $output = & dist\videohuman\videohuman.exe --help 2>&1
+          Write-Host $output
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "警告: --help 返回码 $LASTEXITCODE(可能是缺少 DLL,继续打包)"
+          } else {
+            Write-Host "冒烟测试通过"
+          }
+
+      # ------------------------------------------------------------
+      # 8. 生成打包后的启动脚本
+      # ------------------------------------------------------------
+      - name: Generate startup scripts
+        run: |
+          # 启动工作台.bat — 双击启动 Web 工作台
+          $batContent = @"
+          @echo off
+          chcp 65001 >nul
+          cd /d %~dp0
+          echo ========================================
+          echo   videohuman 数字人视频流水线
+          echo ========================================
+          echo.
+          echo 首次使用请先下载模型权重(约16GB):
+          echo   videohuman.exe download-weights
+          echo.
+          echo 正在启动 Web 工作台...
+          echo 浏览器将自动打开 http://127.0.0.1:8100
+          echo 关闭本窗口即停止服务
+          echo.
+          start "" /min cmd /c "timeout /t 5 /nobreak >nul && start "" http://127.0.0.1:8100"
+          videohuman.exe serve --port 8100
+          pause
+          "@
+          $batContent | Out-File -FilePath "dist\videohuman\启动工作台.bat" -Encoding Default
+
+          # 命令行.bat — 打开命令行方便使用 CLI
+          $cliBat = @"
+          @echo off
+          chcp 65001 >nul
+          cd /d %~dp0
+          echo videohuman CLI 已就绪,输入 videohuman.exe --help 查看命令
+          cmd /k
+          "@
+          $cliBat | Out-File -FilePath "dist\videohuman\命令行.bat" -Encoding Default
+
+          Write-Host "启动脚本已生成"
+
+      # ------------------------------------------------------------
+      # 9. 压缩产物(7z, 分卷 2GB 以适配 GitHub 单文件限制)
+      # ------------------------------------------------------------
+      - name: Compress artifact
+        run: |
+          Write-Host "开始压缩..."
+          # 先清理 __pycache__
+          Get-ChildItem -Path dist\videohuman -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force
+          # 7z 压缩,分卷 1.9GB(留余量给 2GB 限制)
+          7z a -tzip -mx=1 -v1900m videohuman-windows.zip .\dist\videohuman\*
+          Write-Host "压缩完成"
+          Get-ChildItem videohuman-windows.zip* | ForEach-Object {
+            Write-Host "  $($_.Name): $([math]::Round($_.Length/1GB,2)) GB"
+          }
+
+      # ------------------------------------------------------------
+      # 10. 上传 Artifact
+      # ------------------------------------------------------------
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: videohuman-windows-exe
+          path: videohuman-windows.zip*
+          retention-days: 30
+          compression-level: 0  # 已用 7z 压缩,不再二次压缩
+
+      # ------------------------------------------------------------
+      # 11. 创建 GitHub Release(tag 推送 或 手动勾选)
+      # ------------------------------------------------------------
+      - name: Create Release and upload assets
+        if: startsWith(github.ref, 'refs/tags/') || github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: videohuman ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ github.event.inputs.create_release == 'true' }}
+          files: videohuman-windows.zip*
+          body: |
+            ## videohuman Windows 可执行文件
+
+            **版本**: ${{ github.ref_name }}
+            **构建环境**: windows-latest, Python 3.11, torch CUDA 12.8
+            **打包方式**: PyInstaller onedir(非便携版,启动快)
+
+            ### 使用方法
+
+            1. 下载所有 `videohuman-windows.zip.*` 分卷文件到同一目录
+            2. 用 7-Zip 解压(右键 → 7-Zip → 提取到当前文件夹),分卷会自动合并
+            3. 进入 `videohuman` 目录
+            4. 首次使用:打开命令行运行 `videohuman.exe download-weights` 下载模型权重(约16GB)
+            5. 双击 `启动工作台.bat` 启动 Web 工作台,或用 `videohuman.exe --help` 查看 CLI 命令
+
+            ### 系统要求
+
+            - Windows 10/11 64位
+            - NVIDIA GPU(CUDA),显存 ≥ 10GB
+            - 磁盘空间:程序约 6-8GB + 模型权重约 16GB
+
+            ### 注意
+
+            - 模型权重未打包在内,首次运行必须先执行 `download-weights`
+            - 如需发布功能(抖音/B站),需在 Web 工作台中登录
+            - LLM 改写需配置 `VH_LLM_API_KEY` 环境变量
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ------------------------------------------------------------
+      # 12. 最终磁盘空间
+      # ------------------------------------------------------------
+      - name: Disk space after build
+        if: always()
+        run: |
+          Write-Host "=== 磁盘空间(构建后) ==="
+          Get-PSDrive C | Select-Object @{N='FreeGB';E={[math]::Round($_.Free/1GB,2)}}

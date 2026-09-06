@@ -1,0 +1,106 @@
+# videohuman Windows 版使用说明
+
+## 快速开始
+
+### 1. 解压
+用 7-Zip 解压所有分卷文件(`videohuman-windows.zip.001` 等),得到 `videohuman` 目录。
+
+> 必须用 7-Zip 解压,Windows 自带解压不支持分卷。
+> 下载地址: https://www.7-zip.org/
+
+### 2. 下载模型权重(首次必做,约 16GB)
+在 `videohuman` 目录下打开命令行,运行:
+
+```cmd
+videohuman.exe download-weights
+```
+
+这会下载:
+- CosyVoice3 语音合成模型
+- SenseVoice-Small 语音识别模型
+- MuseTalk 数字人模型(含 VAE / Whisper / 人脸解析 / S3FD)
+- IndexTTS-2(备用 TTS)
+
+下载支持断点续传,中断后重新运行即可继续。
+
+### 3. 启动 Web 工作台
+双击 `启动工作台.bat`,浏览器会自动打开 http://127.0.0.1:8100
+
+关闭命令行窗口即停止服务。
+
+### 4. 使用 CLI(可选)
+双击 `命令行.bat` 打开命令行,然后:
+
+```cmd
+videohuman.exe --help              # 查看所有命令
+videohuman.exe capability          # 检测 GPU
+videohuman.exe run --job-id demo --text "你的文案" --ref-audio assets\my_voice.wav --ref-text "参考音频文本" --avatar-video assets\my_avatar.mp4
+videohuman.exe serve --port 8100   # 启动 Web 工作台
+```
+
+## 系统要求
+
+| 项目 | 最低要求 | 推荐 |
+|------|---------|------|
+| 系统 | Windows 10 64位 | Windows 11 |
+| GPU | NVIDIA, 显存 8GB | 显存 ≥ 10GB |
+| 磁盘 | 25GB 可用空间 | 50GB+ |
+| 内存 | 16GB | 32GB |
+
+> 必须是 NVIDIA GPU(AMD/Intel 核显不支持 CUDA 加速)。
+
+## 配置
+
+### LLM 文案改写(可选)
+设置环境变量 `VH_LLM_API_KEY` 为你的 DeepSeek(或 OpenAI 兼容)API Key。
+不配置时 rewrite 环节直通原文,不影响其他功能。
+
+### 发布功能(可选)
+- **抖音**:在 Web 工作台"素材与设置"页扫码登录
+- **B站**:将 biliup 登录 JSON 放入 `configs/cookies/bilibili.json`
+
+登录态文件在 `configs/cookies/` 目录下,不会随程序分发。
+
+## 目录结构
+
+```
+videohuman/
+├── videohuman.exe      # 主程序(CLI + Web 服务)
+├── 启动工作台.bat       # 双击启动 Web 工作台
+├── 命令行.bat           # 双击打开命令行
+├── 使用说明.txt         # 本文件
+└── _internal/          # 运行时依赖(Python 解释器 + 所有库 + 资源)
+    ├── configs/        # 默认配置
+    ├── assets/         # 字体/BGM/背景图(可自行添加素材)
+    ├── third_party/    # CosyVoice / MuseTalk 等引擎代码
+    ├── web/dist/       # Web 工作台前端
+    ├── models/         # 模型权重(download-weights 下载到这里)
+    └── workspace/      # 运行产物(生成的视频等)
+```
+
+## 常见问题
+
+**Q: 双击 exe 闪退?**
+A: 请通过 `命令行.bat` 打开后手动运行 `videohuman.exe --help`,查看报错信息。
+   最常见原因是缺少 NVIDIA 显卡驱动或 CUDA 运行时。
+
+**Q: 提示 "CUDA out of memory"?**
+A: 显存不足。关闭其他占用 GPU 的程序,或降低分辨率/批量大小。
+
+**Q: ffmpeg 报错?**
+A: 程序内置了 ffmpeg,无需额外安装。如果报错,检查是否被杀毒软件拦截。
+
+**Q: 模型下载很慢/失败?**
+A: `download-weights` 支持断点续传,多运行几次即可。
+   ModelScope 部分使用国内镜像,HuggingFace 部分走 hf-mirror。
+
+**Q: 可以把程序放到 Program Files 吗?**
+A: 不建议。程序运行时会在 `_internal/models/` 和 `_internal/workspace/` 写入文件,
+   Program Files 目录需要管理员权限。建议放在 D 盘等用户目录下。
+
+## 版本信息
+
+- 打包方式: PyInstaller onedir(非便携版)
+- Python: 3.11
+- PyTorch: CUDA 12.8
+- 构建平台: GitHub Actions windows-latest
